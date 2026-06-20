@@ -1,0 +1,124 @@
+---
+title: "Compare results"
+author: "Ludmila Danilova"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, echo=FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+
+library(replicateFest)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(ggrepel)
+library(data.table)
+library("DT")
+library(gridExtra)
+library(readxl)
+
+library(tidyverse)
+library(pheatmap)
+library(kableExtra)
+
+```
+
+```{r echo=FALSE, message = FALSE, warning = FALSE}
+
+# Load previously saved results of running replicateFest
+res<-readRDS("Chen_data-output_xr_FDR01_OR5.rds")
+
+```
+
+# 
+
+In this document, we compare results reported in the Chen et al. paper (https://www.frontiersin.org/journals/immunology/articles/10.3389/fimmu.2020.00591/full) with results from running the replicateFest package with similar thresholds: FDR < 0.01 and OR > 5. Also we looked for cross-reactive clones for all Gag and Nef epitopes and compared with results reported in the paper (Supplemenraty table 1)
+
+
+```{r echo=FALSE, message = FALSE, warning = FALSE}
+# need to download supplementary table 1 from the paper
+url <- "https://public-pages-files-2025.frontiersin.org/articles/525044/file/Table_1.XLSX/525044_supplementary-materials_tables_1_xlsx/1"
+
+# Install once if needed
+# install.packages("readxl")
+
+tmp_xlsx <- "Table_1.XLSX"
+
+# download.file(
+#   url = url,
+#   destfile = tmp_xlsx,
+#   mode = "wb",
+#   method = "libcurl"
+# )
+
+table1 <- readxl::read_excel(tmp_xlsx,skip = 2, n_max = 10)
+
+# create the clonotype table with comparison
+
+cloneTab = data.frame(clone = table1$`Amino Acid Sequence`,
+                 protein = rep(c("Gag", "Nef"), times = c(3,6)))
+
+# is expanded 
+cloneTab$is_expanded = table1$`Amino Acid Sequence` %in% res$ref_comparison_only$clone
+cloneTab$is_xr = table1$`Amino Acid Sequence` %in% res$cross_reactive$clone
+
+# clones that reported as cross-reactive in the paper
+xr_paper = c("CASSLDPGANTEAFF", "CASSPGVGNTEAFF",
+             "CASSPRWGDAGELFF","CASSLLAGGSLDEQFF",
+             "CASSLDLRTFTYEQYF")
+cloneTab$is_xr_in_paper = table1$`Amino Acid Sequence` %in% xr_paper
+
+kable(cloneTab)
+
+write.csv(cloneTab, file = "xr_clones_table.csv", row.names = F)
+
+# nine clones reported in the paper for Gag and Nef
+clonesGag = c("CASSLDPGANTEAFF", "CASSPGVGNTEAFF", "CASSPRQAGLVTQYF")
+clonesNef = c("CASSLDLRTFTYEQYF", "CASSLERVGYNEQFF",
+              "CASSLLAGGSLDEQFF", "CASSPRWGDAGELFF",
+              "CAWETGVRDGYTF", "CAISLMGTEAFF")
+
+
+# intersections of published clones and cross-reactive clones
+intersect(res$cross_reactive$clone,clonesGag)
+intersect(res$cross_reactive$clone,clonesNef)
+# intersection of publised clones and expanded clones
+intersect(res$ref_comparison_only$clone,clonesGag)
+intersect(res$ref_comparison_only$clone,clonesNef)
+# cross-reactive clones that were not reported in the paper
+setdiff(res$cross_reactive$clone, c(clonesGag,clonesNef))
+# missed cross-reactive clones
+setdiff(c(clonesGag,clonesNef), res$cross_reactive$clone)
+
+```
+
+## Heatmap of cross-reactive clones
+
+```{r echo=FALSE, fig.width=13, fig.height= 5}
+#==================
+# heatmap of frequencies of cross-reactive clones
+# find columns with frequencies
+freqCol = grep("_percent", colnames(res$cross_reactive), value = T)
+
+plotData = res$cross_reactive[,freqCol]
+
+p = pheatmap(plotData, labels_col = lapply(strsplit(colnames(plotData), 
+    "_percent"), getElement, 1), scale = "none", main = "Cross-reactive clones")
+
+print(p)
+
+pdf("xr_clones.pdf", width = 12, height = 4)
+print(p)
+dev.off()
+
+```
+
+# R libraries and versions
+
+```{r echo=FALSE, message = FALSE, warning = FALSE}
+sessionInfo()
+```
