@@ -107,7 +107,10 @@ getSimData = function(params, countData)
   simSet=simP(params[1,])
   for(i in 2:nrow(params)) simSet=rbind(simSet,simP(params[i,]))
   
-  levels=apply(cbind(rep(c("L1","L2","L3"),3),rep(c("E1","E2","E3"),each=3)),1,paste,collapse="_")
+  levels=apply(cbind(rep(c("L1","L2","L3"),3),
+                     rep(c("E1","E2","E3"),each=3)),
+               1,
+               paste,collapse="_")
   clones=apply(cbind(rep(LETTERS[1:10],9),rep(levels,each=10)),1,paste,collapse="_")
   rownames(simSet)=clones
   

@@ -62,7 +62,8 @@ saveRDS(sim_res, file = "sim_res.rds")
 saveRDS(sim_res_tables, file = "sim_res_tables.rds")
 
 
-# Stack all 10 tables into an array and compute mean ± SD detection rate
+# Stack all 10 tables into an array and 
+# compute mean ± SD detection rate
 rate_array <- simplify2array(lapply(sim_res, function(x) x / 10))
 
 mean_mat <- apply(rate_array, 1:2, mean)
@@ -116,4 +117,13 @@ write.csv(table_df, "detection_rate_summary.csv", row.names = FALSE)
 ggsave("detection_rate_heatmap.pdf", plot = p, width = 5, height = 4)
 ggsave("detection_rate_heatmap.png", plot = p, width = 5, height = 4, dpi = 300)
 
+#===========================
+# calculate how many clones from the background we called significant
+# to estimate "false positives"
+
+sapply(sim_res_tables,function(x){
+  # split clones and count NAs, which correspond to background probes
+  s = splitFileName(x$clone)
+  sum(is.na(s[,2]))
+})
 
